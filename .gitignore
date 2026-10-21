@@ -1,0 +1,22 @@
+build
+mx.scratch
+!.settings
+# 编译输出目录
+Debug/
+Release/
+
+# CMake 生成的文件
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+
+# 编译过程文件
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+
+# 系统文件
+.DS_Store

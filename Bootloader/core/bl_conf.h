@@ -16,6 +16,8 @@ extern "C" {
 
 #define BOOTL_FLAG_PAGE_ADDR 0x0800FC00
 
+#define BOOTL_MSP_TOP 0x20000000
+
 #define BOOLT_LOG_LEVE 3
 
 #define BOOTL_LOG_ERROR 1

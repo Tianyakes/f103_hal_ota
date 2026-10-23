@@ -4,6 +4,7 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
+#include <stdint.h>
 
 uint32_t BL_Flag_Get(void);
 void Flag_Set_Updating(void);

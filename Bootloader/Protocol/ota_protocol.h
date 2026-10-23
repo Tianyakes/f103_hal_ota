@@ -17,7 +17,7 @@ typedef struct{
     uint8_t cmd;
     uint16_t seq;
     uint16_t data_len;
-}OtaFrameHead_Type;
+} OtaFrameHead_Type;
 
 #ifdef __cplusplus
 }

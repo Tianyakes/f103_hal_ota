@@ -22,7 +22,7 @@ extern "C" {
 
 #define BOOTL_MSP_TOP 0x20000000
 
-#define BOOLT_LOG_LEVE 3
+#define BOOLT_LOG_LEVE 0
 
 #define BOOTL_LOG_ERROR 1
 #define BOOTL_LOG_WARRING 2

@@ -1,4 +1,5 @@
 #include "crc16.h"
+#include <stdint.h>
 
 crc_t crc_check(crc_t crc, uint8_t dat)
 {
@@ -10,6 +11,14 @@ crc_t crc_check(crc_t crc, uint8_t dat)
             crc = (crc_t)((crc << 1) ^ CRC_POLY);
         else
             crc = (crc_t)(crc << 1);
+    }
+    return crc;
+}
+
+crc_t crc_check_Table_XMODEM(uint8_t *dat, uint16_t len){
+    crc_t crc = 0x0000;
+    while (len--) {
+        crc = (crc<<8) ^ crc16_table_XMODEM[((crc>>8)^(*dat++)) & 0xff];
     }
     return crc;
 }

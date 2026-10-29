@@ -223,7 +223,19 @@ void USART1_IRQHandler(void)
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
-
+  // 判断是否是空闲中断（IDLE）
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET) {
+      // 1. 清除标志位（必须用这种方式清，否则会卡死）
+      __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+      
+      // 2. 计算收到多少字节
+      // DMA 剩余计数值 = 总缓冲区 - 收到的字节数
+      uint16_t recv_len = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
+      
+      // 3. 记录
+      extern void UART_IDLE_Callback(uint16_t len);
+      UART_IDLE_Callback(recv_len); 
+  }
   /* USER CODE END USART1_IRQn 1 */
 }
 

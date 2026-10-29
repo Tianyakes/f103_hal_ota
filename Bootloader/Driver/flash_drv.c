@@ -30,13 +30,13 @@ int BL_FlashErasePages(uint32_t start_addr, uint32_t num_pages){
     return 0;
 }
 
-int BL_FlashWriteByte(const uint32_t start_addr, const char *data, uint16_t len){
-    if(!BL_IsFlashAddr_Valid(start_addr) || !BL_IsFlashAddr_Valid(start_addr + len -1)){
+int BL_FlashWriteByte(uint32_t addr, const uint8_t *data, uint32_t len){
+    if(!BL_IsFlashAddr_Valid(addr) || !BL_IsFlashAddr_Valid(addr + len -1)){
         BootL_LOG_E("Write err:address is not vaild");
         return -1;
     }
     //写入以半字16字节写入，判断目标地址是否为奇数，是则报错
-    if ((start_addr % 2) != 0) {
+    if ((addr % 2) != 0) {
         BootL_LOG_E("Write err: addr not aligned to halfword!");
         return -1;
     }
@@ -49,9 +49,9 @@ int BL_FlashWriteByte(const uint32_t start_addr, const char *data, uint16_t len)
         }else{
             halfword |= 0xff00;
         }
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, start_addr + i, halfword) != HAL_OK) {
+        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, addr + i, halfword) != HAL_OK) {
             HAL_FLASH_Lock();
-            BootL_LOG_E("Write failed at addr: 0x%08X", start_addr + i);
+            BootL_LOG_E("Write failed at addr: 0x%08X", addr + i);
             return -1;
         }
     }

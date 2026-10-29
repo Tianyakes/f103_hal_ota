@@ -8,8 +8,8 @@ extern "C"{
 #include <stdint.h>
 
 #define BOOTL_FLASH_PAGE_SIZE 1024
-int Flash_Erase_Pages(uint32_t start_addr, uint32_t num_pages);
-int Flash_Write_Data(uint32_t addr, const uint8_t *data, uint32_t len);
+int BL_FlashErasePages(uint32_t start_addr, uint32_t num_pages);
+int BL_FlashWriteByte(uint32_t addr, const uint8_t *data, uint32_t len);
 void Flash_Read_Data(uint32_t addr, uint8_t *buf, uint32_t len);
 
 #ifdef __cplusplus

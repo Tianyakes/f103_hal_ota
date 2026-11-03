@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "AIX Probe MCP",
+    "description": "Connects the AIX Probe MCP server (ai-link) and exposes its tools to the agent."
+  }
+}

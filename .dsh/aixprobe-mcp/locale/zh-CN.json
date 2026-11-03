@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "AIX Probe MCP 连接",
+    "description": "连接 AIX Probe MCP 服务器（ai-link），把它的工具提供给智能体使用。"
+  }
+}

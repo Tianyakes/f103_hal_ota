@@ -1,0 +1,8 @@
+- insert:
+    - id: aixprobe-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: aixprobe
+        transport: streamable-http
+        url: http://aixprobe.local:8080/mcp
+        failOnStartupError: true

@@ -5,16 +5,21 @@
 extern "C" {
 #endif
 
-#define BOOTL_BOOTLOADER_ADDR 0X08000000 // BL地址
-#define BOOTL_BOOTLOADER_SIZE (8 * 1024) // BOOTLOADER 大小
+// 1. Bootloader 区 (起始: 0x08000000, 大小: 12KB)
+#define BOOTL_BOOTLOADER_ADDR   0x08000000
+#define BOOTL_BOOTLOADER_SIZE   (12 * 1024)      // 12KB
 
-#define BOOTL_APPLICATION_ADDR 0X08002000 //APP地址
-#define BOOTL_APPLICATION_SIZE (28 * 1024)
+// 2. Application 区 (起始: 0x08003000, 大小: 28KB)
+#define BOOTL_APPLICATION_ADDR  0x08003000
+#define BOOTL_APPLICATION_SIZE  (28 * 1024)      // 28KB
 
-#define BOOTL_DOWNLOAD_ADDR 0x08009000
-#define BOOTL_DOWNLOAD_SIZE (27 * 1024)
+// 3. Download 区 (起始: 0x0800A000, 大小: 23KB)
+#define BOOTL_DOWNLOAD_ADDR     0x0800A000
+#define BOOTL_DOWNLOAD_SIZE     (23 * 1024)      // 23KB
 
-#define BOOTL_FLAG_PAGE_ADDR 0x0800FC00
+// 4. 标志位页 (位于 Flash 最后一页, 大小: 1KB)
+#define BOOTL_FLAG_PAGE_ADDR    0x0800FC00
+#define BOOTL_FLAG_PAGE_SIZE    (1 * 1024)       // 1KB
 #define BOOTL_UPDATING 0X55AA55AA
 
 #define OTA_FRAME_HEAD  0xA5A5  // 帧头：用于对齐数据

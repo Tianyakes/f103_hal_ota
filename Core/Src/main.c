@@ -19,12 +19,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "jump_to_app.h"
+#include "bl_conf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -91,6 +94,15 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_Delay(200);
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_Delay(200);
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_Delay(200);
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+  HAL_Delay(200);
+  app_jump(BOOTL_APPLICATION_ADDR);
 
   /* USER CODE END 2 */
 

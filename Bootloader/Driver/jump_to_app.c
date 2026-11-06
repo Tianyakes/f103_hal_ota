@@ -25,8 +25,9 @@ void app_jump(uint32_t app_addr){
             // 设置主站指针
             __set_MSP(*(__IO uint32_t*)app_addr);
             // 设置中断向量指令
-            SCB->VTOR = app_addr;
-            // 跳转函数
+            // 重新打开全局中断（否则 APP 继承 PRIMASK=1，SysTick 中断不响应，HAL_Delay 会卡死）
+            __enable_irq();
+            // 重新打开全局中断（否则             // 跳转函数
             RstFunction();
         }else{
             BootL_LOG_E("Address is not MSP");

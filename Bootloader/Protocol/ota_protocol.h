@@ -23,8 +23,8 @@ typedef struct{
 } OtaFrame_Type;
 
 void OtaFrame_TypeInit(OtaFrame_Type *o);
-OtaFrame_Type* uart_protocol_start(void);
-void uart_protocol_Clear(void);
+OtaFrame_Type* ota_protocol_start(void);
+void ota_protocol_Clear(void);
 #ifdef __cplusplus
 }
 #endif

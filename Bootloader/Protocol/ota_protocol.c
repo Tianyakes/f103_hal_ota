@@ -19,18 +19,19 @@ void OtaFrame_TypeInit(OtaFrame_Type *o){
     o->total = 0;
 }
 
-void uart_protocol_Clear(void){
+void ota_protocol_Clear(void){
     UART_Transport_ClearRxFlag();
 }
 
-OtaFrame_Type* uart_protocol_start(void){
+OtaFrame_Type* ota_protocol_start(void){
     if(UART_GetRecviFlag() == RECVI_DONE){
         otaFrame.len = UART_Transport_GetRxLen();
         if(otaFrame.len == 0) return NULL;
         uint8_t *frame = otaFrame.frame;
         frame = UART_Transport_GetRxBuf();
         if(frame[0] != (OTA_FRAME_HEAD>>8) || frame[1] != (OTA_FRAME_HEAD &0xff)){
-            uart_protocol_Clear();
+            ota_protocol_Clear();
+            UART_Transport_Send((const uint8_t*)"NACK", 4);
             return NULL;
         }
         otaFrame.cmd = frame[2];
@@ -44,7 +45,7 @@ OtaFrame_Type* uart_protocol_start(void){
             // UART_Transport_Send((const uint8_t*)"NACK", 4);
             return &otaFrame;
         } else {
-            uart_protocol_Clear();
+            ota_protocol_Clear();
             UART_Transport_Send((const uint8_t*)"NACK", 4);
             return NULL;
             // if(otaFrame.cmd == 0x01){

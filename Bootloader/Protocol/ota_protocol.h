@@ -1,5 +1,6 @@
 #ifndef OTA_PROTOCOL_H
 #define OTA_PROTOCOL_H
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -14,11 +15,16 @@ typedef enum{
 
 typedef struct{
     uint16_t haed;
-    uint8_t cmd;
-    uint16_t seq;
-    uint16_t data_len;
-} OtaFrameHead_Type;
+    OtaCmd_Type cmd;
+    uint16_t len;
+    uint8_t index;
+    uint8_t total;
+    uint8_t* frame;
+} OtaFrame_Type;
 
+void OtaFrame_TypeInit(OtaFrame_Type *o);
+OtaFrame_Type* uart_protocol_start(void);
+void uart_protocol_Clear(void);
 #ifdef __cplusplus
 }
 #endif

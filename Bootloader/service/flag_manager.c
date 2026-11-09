@@ -15,6 +15,12 @@ void Flag_Set_Updating(void) {
     BL_FlashWriteByte(BOOTL_FLAG_PAGE_ADDR, (uint8_t *)&flag, 4);
 }
 
+void Flag_Set_Updated(void) {
+    uint32_t flag = BOOTL_UPDATED;
+    BL_FlashErasePages(BOOTL_FLAG_PAGE_ADDR, 1); // 擦除整页
+    BL_FlashWriteByte(BOOTL_FLAG_PAGE_ADDR, (uint8_t *)&flag, 4);
+}
+
 void Flag_Clear(void) {
     BL_FlashErasePages(BOOTL_FLAG_PAGE_ADDR, 1); // 擦除就代表清零（变回 0xFFFFFFFF）
 }

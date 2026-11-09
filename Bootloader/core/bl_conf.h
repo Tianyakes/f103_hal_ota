@@ -5,6 +5,15 @@
 extern "C" {
 #endif
 
+#define BOOTL_VERSION_0 0
+#define BOOTL_VERSION_1 0
+#define BOOTL_VERSION_2 1
+#define STRING_BL_BL(x) #x
+#define BOOTLOADER_VERSION STRING_BL(BOOTL_VERSION_0)"."STRING_BL(BOOTL_VERSION_1)"."STRING_BL(BOOTL_VERSION_2)
+
+#define BOOTLOADER_VERSION_NUM \
+    ((BOOTL_VERSION_0 << 16) | (BOOTL_VERSION_1 << 8) | (BOOTL_VERSION_2))
+
 // 1. Bootloader 区 (起始: 0x08000000, 大小: 12KB)
 #define BOOTL_BOOTLOADER_ADDR   0x08000000
 #define BOOTL_BOOTLOADER_SIZE   (12 * 1024)      // 12KB
@@ -21,6 +30,7 @@ extern "C" {
 #define BOOTL_FLAG_PAGE_ADDR    0x0800FC00
 #define BOOTL_FLAG_PAGE_SIZE    (1 * 1024)       // 1KB
 #define BOOTL_UPDATING 0X55AA55AA
+#define BOOTL_UPDATED 0xAA55AA55
 
 #define OTA_FRAME_HEAD  0xA5A5  // 帧头：用于对齐数据
 #define OTA_MAX_DATA_LEN 512    // 单包最大携带的数据长度

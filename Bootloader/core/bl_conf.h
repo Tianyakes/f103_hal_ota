@@ -16,11 +16,11 @@ extern "C" {
 
 // 1. Bootloader 区 (起始: 0x08000000, 大小: 12KB)
 #define BOOTL_BOOTLOADER_ADDR   0x08000000
-#define BOOTL_BOOTLOADER_SIZE   (12 * 1024)      // 12KB
+#define BOOTL_BOOTLOADER_SIZE   (16 * 1024)      // 12KB
 
-// 2. Application 区 (起始: 0x08003000, 大小: 28KB)
-#define BOOTL_APPLICATION_ADDR  0x08003000
-#define BOOTL_APPLICATION_SIZE  (28 * 1024)      // 28KB
+// 2. Application 区 (起始: 0x08004000, 大小: 28KB)
+#define BOOTL_APPLICATION_ADDR  0x08004000
+#define BOOTL_APPLICATION_SIZE  (24 * 1024)      // 28KB
 
 // 3. Download 区 (起始: 0x0800A000, 大小: 23KB)
 #define BOOTL_DOWNLOAD_ADDR     0x0800A000

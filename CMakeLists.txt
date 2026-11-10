@@ -35,7 +35,7 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
     Bootloader/core/bl_conf.h
-    Bootloader/core/bl_version.h
+    # Bootloader/core/bl_version.h
     Bootloader/core/bootloader.c
     Bootloader/core/bootloader.h
     Bootloader/core/boot_manager.c

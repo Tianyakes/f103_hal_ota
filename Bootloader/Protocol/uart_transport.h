@@ -7,7 +7,7 @@
 typedef enum{
     RECVI_FAILED = 0,
     RECVI_DONE,
-    RECVI_PASS
+    RECVI_PASSED
 }Recvi_Type;
 
 void UART_Transport_Init(void);

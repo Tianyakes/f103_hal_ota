@@ -26,7 +26,6 @@ void BootLoader(void){
     if(ret){
         if(o.cmd == OTA_CMD_START){
             OTA = OTA_UPDATING;
-            ret = 0;
             ota_protocol_Clear();
             ota_protocol_ACK();
         }
@@ -40,5 +39,6 @@ void BootLoader(void){
             ota_protocol_Clear();
             ota_protocol_NACK();
         }
+        ret = 0;
     }
 }

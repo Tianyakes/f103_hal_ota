@@ -7,7 +7,7 @@ extern DMA_HandleTypeDef hdma_usart1_rx;
 static uint8_t rx_buffer[RX_BUFFER_SIZE];
 static volatile uint16_t rx_len = 0;
 // static volatile uint16_t rx_ready = 0;
-static volatile Recvi_Type R_flag = RECVI_PASS;
+static volatile Recvi_Type R_flag = RECVI_PASSED;
 
 void UART_Transport_Init(void){
     __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
@@ -36,7 +36,7 @@ Recvi_Type UART_GetRecviFlag(void){
 
 // 处理完数据后调用，清空标志并重新启动接收
 void UART_Transport_ClearRxFlag(void) {
-    UART_SetFlag(RECVI_PASS); //表示已经处理的数据
+    UART_SetFlag(RECVI_PASSED); //表示已经处理的数据
     rx_len = 0;
     
     // 清空 DMA 当前计数器（重新开始计）

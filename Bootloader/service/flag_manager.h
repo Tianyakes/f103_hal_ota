@@ -8,6 +8,7 @@ extern "C"{
 
 uint32_t BL_Flag_Get(void);
 void Flag_Set_Updating(void);
+void Flag_Set_Updated(void);
 void Flag_Clear(void);
 
 #ifdef __cplusplus

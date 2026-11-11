@@ -5,7 +5,7 @@ typedef enum{
     OTA_IDLE = 0,
     OTA_UPDATING,
     OTA_FINISH,
-    OTA_UPDATED,
+    OTA_CARRYING,
     OTA_ERROR
 } OTA_Update_t;
 

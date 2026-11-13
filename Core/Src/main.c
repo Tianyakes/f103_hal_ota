@@ -19,7 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
-#include "stm32f1xx_hal.h"
+#include "stm32f103xb.h"
 #include "stm32f1xx_hal_gpio.h"
 #include "usart.h"
 #include "gpio.h"
@@ -102,6 +102,8 @@ int main(void)
   //   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
   // HAL_Delay(200);
   // app_jump(BOOTL_APPLICATION_ADDR);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+  BootLoader_Init();
   BootLoader();
   /* USER CODE END 2 */
 

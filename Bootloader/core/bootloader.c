@@ -46,7 +46,7 @@ void BootLoader(void){
             ota_protocol_ACK();
         }
         else if (o.cmd == OTA_CMD_DATA && OTA == OTA_UPDATING) {
-            BootL_Flash_If_write(BOOTL_DOWNLOAD_ADDR +  g_download_size, &o.frame[8], o.len);
+            BootL_Flash_If_write(BOOTL_DOWNLOAD_ADDR +  g_download_size, &o.frame[7], o.len);
             g_download_size+=o.len;
             g_download_size_total+=o.len;
             BootL_LOG_I("Recviced:%d/%d remaining, Pack size:%d Bytes", o.index, o.total, g_download_size_total);
@@ -84,8 +84,8 @@ void BootLoader(void){
             }
 
             //节省空间复用数据帧的缓存空间
-            BootL_Flash_If_Read(BOOTL_DOWNLOAD_ADDR + g_download_size, &o.frame[8], o.len);
-            BootL_Flash_If_write(BOOTL_APPLICATION_ADDR + g_app_size, &o.frame[8], o.len);
+            BootL_Flash_If_Read(BOOTL_DOWNLOAD_ADDR + g_download_size, &o.frame[7], o.len);
+            BootL_Flash_If_write(BOOTL_APPLICATION_ADDR + g_app_size, &o.frame[7], o.len);
             g_app_size+=o.len;
             g_download_size+=o.len;
         }

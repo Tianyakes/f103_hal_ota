@@ -16,7 +16,7 @@ static OTA_Update_t OTA = OTA_IDLE;
 void BootLoader_Init(void){
     // 驱动初始化
 
-
+    UART_Transport_Init();
     // ota接收初始化
     OtaFrame_TypeInit(&o);
 }

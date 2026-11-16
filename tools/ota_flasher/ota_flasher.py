@@ -20,6 +20,8 @@
     START --ACK--> DATA(index 1..n, 每包等待 ACK) --ACK--> FINISH --ACK--> 完成
     设备只有在 PA0 为低电平时才进入升级模式并接受帧，因此上位机循环发送
     START 进行握手，直到收到 ACK。
+    Bootloader 通过同一串口打印的日志会和 ACK/NACK 混在字节流里，上位机按
+    应答标记切分，剩余文本以“[设备]”前缀显示在日志窗口。
 
 依赖：
     pip install pyserial
@@ -62,7 +64,7 @@ ACK_TOKEN = b"ACK"
 NACK_TOKEN = b"NACK"
 
 APP_AREA_SIZE = 24 * 1024        # BOOTL_APPLICATION_SIZE
-DOWNLOAD_AREA_SIZE = 23 * 1024   # BOOTL_DOWNLOAD_SIZE（仅用于界面提示）
+DOWNLOAD_AREA_SIZE = 21 * 1024   # BOOTL_DOWNLOAD_SIZE（仅用于界面提示）
 
 HANDSHAKE_ATTEMPTS = 120         # 每次尝试发送 START 后等待 0.5s
 PACKET_TIMEOUT_RETRIES = 4       # 单包应答超时的重发次数
@@ -137,6 +139,7 @@ class OtaFlasher:
         on_log=None,
         on_progress=None,
         on_state=None,
+        on_device_log=None,
     ):
         self.port = port
         self.baud = baud
@@ -151,9 +154,12 @@ class OtaFlasher:
         self._on_log = on_log or (lambda msg, level="info": None)
         self._on_progress = on_progress or (lambda sent, total: None)
         self._on_state = on_state or (lambda text, level="run": None)
+        self._on_device = on_device_log or (lambda text: None)
 
         self._ser = None
         self._stop = threading.Event()
+        self._rxbuf = bytearray()   # 已读取但尚未处理的字节
+        self._text_buf = ""         # 未凑成完整行的设备文本
 
     # -- 外部控制 -----------------------------------------------------------
     def stop(self):
@@ -195,9 +201,17 @@ class OtaFlasher:
                 "无法打开串口 %s：%s（端口被占用或已拔出？）" % (self.port, exc)
             )
         time.sleep(0.1)  # 给 USB 转串口芯片一点稳定时间
+        self._rxbuf.clear()
+        self._text_buf = ""
         self._flush_input()
 
     def _close(self):
+        if self._ser is not None:
+            try:
+                self._drain_pending()
+            except FlasherError:
+                pass  # 关闭阶段不再抛错，避免掩盖真正的结果
+        self._flush_text()
         if self._ser is not None:
             try:
                 self._ser.close()
@@ -205,8 +219,23 @@ class OtaFlasher:
                 pass
             self._ser = None
 
+    def _drain_pending(self):
+        """把串口里已经到达的剩余字节按设备日志显示出来（丢弃应答）。"""
+        pending = bytearray(self._rxbuf)
+        self._rxbuf.clear()
+        try:
+            waiting = self._ser.in_waiting
+            if waiting:
+                pending.extend(self._ser.read(waiting))
+        except (serial.SerialException, OSError) as exc:
+            raise FlasherError("串口连接已断开：%s" % exc)
+        if pending:
+            text = bytes(pending).replace(NACK_TOKEN, b"").replace(ACK_TOKEN, b"")
+            self._device_bytes(text)
+
     def _flush_input(self):
         try:
+            self._drain_pending()
             self._ser.reset_input_buffer()
         except (serial.SerialException, OSError) as exc:
             raise FlasherError("串口连接已断开：%s" % exc)
@@ -222,38 +251,71 @@ class OtaFlasher:
         except (serial.SerialException, OSError) as exc:
             raise FlasherError("串口写入失败：%s" % exc)
 
+    def _find_token(self):
+        """在接收缓冲里找最早的应答标记，返回 (token, 起始下标, 长度)。"""
+        for i in range(len(self._rxbuf)):
+            if self._rxbuf.startswith(NACK_TOKEN, i):
+                return "NACK", i, len(NACK_TOKEN)
+            if self._rxbuf.startswith(ACK_TOKEN, i):
+                return "ACK", i, len(ACK_TOKEN)
+        return None, 0, 0
+
+    def _device_bytes(self, raw):
+        """把设备打印的文本（非应答）按行转给界面。"""
+        if not raw:
+            return
+        text = raw.decode("ascii", errors="replace")
+        text = "".join(ch for ch in text if ch in "\r\n\t" or ch.isprintable())
+        self._text_buf += text
+        while "\n" in self._text_buf:
+            line, self._text_buf = self._text_buf.split("\n", 1)
+            line = line.strip()
+            if line:
+                self._on_device(line)
+
+    def _flush_text(self):
+        """把半行残留也发出去（设备可能不换行）。"""
+        line = self._text_buf.strip()
+        self._text_buf = ""
+        if line:
+            self._on_device(line)
+
     def _read_token(self, timeout):
         """在 timeout 内读取应答，返回 "ACK" / "NACK" / None。
 
-        设备端只回裸 ASCII，这里按字节流扫描，容忍其它日志字符。
-        先判断 NACK：它的尾部同样包含 "ACK"。
+        设备端只回裸 ASCII，这里按字节流扫描，应答之间的其它字符
+        当作 Bootloader 日志转给界面。先判断 NACK：它尾部同样包含 "ACK"。
         """
         deadline = time.monotonic() + timeout
-        buf = bytearray()
         while True:
             if self._stop.is_set():
                 raise FlashCancelled()
+            token, idx, tlen = self._find_token()
+            if token:
+                if idx > 0:
+                    self._device_bytes(bytes(self._rxbuf[:idx]))
+                    del self._rxbuf[:idx]
+                del self._rxbuf[:tlen]
+                return token
+            # 只保留末尾可能是应答前缀的字节，其余按设备日志处理
+            keep = max(len(ACK_TOKEN), len(NACK_TOKEN)) - 1
+            if len(self._rxbuf) > keep:
+                emit = len(self._rxbuf) - keep
+                self._device_bytes(bytes(self._rxbuf[:emit]))
+                del self._rxbuf[:emit]
             remaining = deadline - time.monotonic()
             if remaining <= 0:
+                if self._rxbuf:
+                    self._device_bytes(bytes(self._rxbuf))
+                    self._rxbuf.clear()
+                self._flush_text()
                 return None
             try:
                 chunk = self._ser.read(64)
             except (serial.SerialException, OSError) as exc:
                 raise FlasherError("串口读取失败：%s" % exc)
-            if not chunk:
-                continue
-            buf.extend(chunk)
-
-            i = 0
-            while i < len(buf):
-                if buf.startswith(NACK_TOKEN, i):
-                    return "NACK"
-                if buf.startswith(ACK_TOKEN, i):
-                    return "ACK"
-                i += 1
-            # 没找到完整应答：只保留可能被截断的尾部，丢弃其它噪声
-            if len(buf) > 8:
-                del buf[:-8]
+            if chunk:
+                self._rxbuf.extend(chunk)
 
     def _transact(self, frame, timeout, what, timeout_retries=None, nack_retries=None):
         """发送一帧并阻塞等待 ACK；NACK 和超时分别计数，未收到 ACK 不会返回。"""
@@ -394,7 +456,7 @@ class OtaFlasher:
 # Tkinter 界面
 # ----------------------------------------------------------------------------
 class App(tk.Tk):
-    LEVEL_TAGS = ("info", "ok", "warn", "error", "dim")
+    LEVEL_TAGS = ("info", "ok", "warn", "error", "dim", "device")
 
     def __init__(self):
         super().__init__()
@@ -511,7 +573,7 @@ class App(tk.Tk):
 
         ttk.Label(
             file_box,
-            text="仅支持原始 .bin；固件写入应用程序区（起始 0x08004000，最大 24KB）。"
+            text="仅支持原始 .bin；固件写入应用程序区（起始 0x08004800，最大 24KB）。"
                  "开始前请先把 PA0 拉低。",
             foreground="#9a6700",
         ).grid(row=2, column=0, columnspan=2, sticky="w", padx=6, pady=(0, 4))
@@ -586,6 +648,7 @@ class App(tk.Tk):
         self.log_text.tag_configure("warn", foreground="#9a6700")
         self.log_text.tag_configure("error", foreground="#cf222e")
         self.log_text.tag_configure("dim", foreground="#8c959f")
+        self.log_text.tag_configure("device", foreground="#8250df")
 
         self._stateful = [
             (self.port_cb, "readonly"),
@@ -658,6 +721,8 @@ class App(tk.Tk):
     # -- 日志与状态 ---------------------------------------------------------
     def _append_log(self, msg, level="info"):
         timestamp = time.strftime("%H:%M:%S")
+        if level == "device":
+            msg = "[设备] " + msg
         self.log_text.configure(state="normal")
         self.log_text.insert(
             "end", "[%s] %s\n" % (timestamp, msg), level if level in self.LEVEL_TAGS else "info"
@@ -696,6 +761,9 @@ class App(tk.Tk):
 
     def _queue_state(self, text, level="run"):
         self._queue.put(("status", text, level))
+
+    def _queue_device(self, text):
+        self._queue.put(("log", text, "device"))
 
     def _poll_queue(self):
         try:
@@ -792,6 +860,7 @@ class App(tk.Tk):
             on_log=self._queue_log,
             on_progress=self._queue_progress,
             on_state=self._queue_state,
+            on_device_log=self._queue_device,
         )
         self._flasher = flasher
         self._running = True
@@ -803,7 +872,7 @@ class App(tk.Tk):
         )
         if self._firmware_size > DOWNLOAD_AREA_SIZE:
             self._append_log(
-                "提示：固件大于下载区 23KB，设备会在传输中途分批搬运，属正常现象。",
+                "提示：固件大于下载区 21KB，设备会在传输中途分批搬运，属正常现象。",
                 "dim",
             )
 

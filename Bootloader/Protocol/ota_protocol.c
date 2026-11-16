@@ -30,14 +30,16 @@ void ota_protocol_NACK(void){
 }
 
 uint8_t ota_protocol_start(OtaFrame_Type *o){
-    // HAL_Delay(500);
+    HAL_Delay(200);
     if(UART_GetRecviFlag() == RECVI_DONE){
         o->len = UART_Transport_GetRxLen();
         if(o->len == 0){
-
+            BootL_LOG_I("zero data");
+            return 0;
         }
         o->frame = UART_Transport_GetRxBuf();
         if(o->frame[0] != (OTA_FRAME_HEAD>>8) || o->frame[1] != (OTA_FRAME_HEAD &0xff)){
+            BootL_LOG_I("Head error");
             return 0;
         }
         o->cmd = o->frame[2];
@@ -49,8 +51,10 @@ uint8_t ota_protocol_start(OtaFrame_Type *o){
         uint16_t crc_recv = (o->frame[7+o->len] << 8) | o->frame[8 + o->len];
         if( crc_check == crc_recv){
             // UART_Transport_Send((const uint8_t*)"NACK", 4);
+            BootL_LOG_I("frame ok");
             return 1;
         } else {
+            BootL_LOG_I("crc error");
             return 0;
             // if(o->cmd == 0x01){
             //     UART_Transport_Send((const uint8_t*)"ACK", 3);
@@ -60,5 +64,6 @@ uint8_t ota_protocol_start(OtaFrame_Type *o){
         }
         // UART_Transport_ClearRxFlag();
     }
+    BootL_LOG_I("no data");
     return 0;
 }

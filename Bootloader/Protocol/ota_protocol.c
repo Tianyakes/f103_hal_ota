@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "ota_protocol.h"
+#include "stm32f1xx_hal.h"
 #include "uart_transport.h"
 #include "crc16.h"
 #include "flag_manager.h"
@@ -29,9 +30,12 @@ void ota_protocol_NACK(void){
 }
 
 uint8_t ota_protocol_start(OtaFrame_Type *o){
+    // HAL_Delay(500);
     if(UART_GetRecviFlag() == RECVI_DONE){
         o->len = UART_Transport_GetRxLen();
-        if(o->len == 0) return 0;
+        if(o->len == 0){
+
+        }
         o->frame = UART_Transport_GetRxBuf();
         if(o->frame[0] != (OTA_FRAME_HEAD>>8) || o->frame[1] != (OTA_FRAME_HEAD &0xff)){
             return 0;

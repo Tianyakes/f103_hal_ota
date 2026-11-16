@@ -65,8 +65,11 @@ APP_AREA_SIZE = 24 * 1024        # BOOTL_APPLICATION_SIZE
 DOWNLOAD_AREA_SIZE = 23 * 1024   # BOOTL_DOWNLOAD_SIZE（仅用于界面提示）
 
 HANDSHAKE_ATTEMPTS = 120         # 每次尝试发送 START 后等待 0.5s
-PACKET_RETRIES = 4
-FINISH_RETRIES = 2
+PACKET_TIMEOUT_RETRIES = 4       # 单包应答超时的重发次数
+PACKET_NACK_RETRIES = None       # None = 无限重试，直到收到 ACK 或手动停止
+FINISH_TIMEOUT_RETRIES = 2       # FINISH 应答超时的重发次数
+FRAME_GAP_MS = 20                # 收到 ACK 后到发送下一帧之间的间隔
+NACK_BACKOFF_MS = 100            # 收到 NACK 后重发前的退避时间
 
 APP_TITLE = "STM32 Bootloader OTA 烧录上位机"
 
@@ -126,7 +129,10 @@ class OtaFlasher:
         baud,
         packet_size=MAX_DATA_LEN,
         ack_timeout=5.0,
-        packet_retries=PACKET_RETRIES,
+        frame_gap=FRAME_GAP_MS / 1000.0,
+        nack_backoff=NACK_BACKOFF_MS / 1000.0,
+        packet_timeout_retries=PACKET_TIMEOUT_RETRIES,
+        nack_retries=PACKET_NACK_RETRIES,
         handshake_attempts=HANDSHAKE_ATTEMPTS,
         on_log=None,
         on_progress=None,
@@ -136,7 +142,10 @@ class OtaFlasher:
         self.baud = baud
         self.packet_size = max(1, min(packet_size, MAX_DATA_LEN))
         self.ack_timeout = ack_timeout
-        self.packet_retries = packet_retries
+        self.frame_gap = max(0.0, frame_gap)
+        self.nack_backoff = max(0.0, nack_backoff)
+        self.packet_timeout_retries = packet_timeout_retries
+        self.nack_retries = nack_retries
         self.handshake_attempts = handshake_attempts
 
         self._on_log = on_log or (lambda msg, level="info": None)
@@ -159,6 +168,13 @@ class OtaFlasher:
 
     def _state(self, text, level="run"):
         self._on_state(text, level)
+
+    def _sleep(self, seconds):
+        """可被“停止”立即打断的等待。"""
+        if seconds <= 0:
+            return
+        if self._stop.wait(seconds):
+            raise FlashCancelled()
 
     # -- 串口底层 -----------------------------------------------------------
     def _open(self):
@@ -239,19 +255,59 @@ class OtaFlasher:
             if len(buf) > 8:
                 del buf[:-8]
 
-    def _transact(self, frame, timeout, retries, what):
-        """发送一帧并等待 ACK，超时/NACK 自动重发。"""
-        for attempt in range(1, retries + 1):
+    def _transact(self, frame, timeout, what, timeout_retries=None, nack_retries=None):
+        """发送一帧并阻塞等待 ACK；NACK 和超时分别计数，未收到 ACK 不会返回。"""
+        if timeout_retries is None:
+            timeout_retries = self.packet_timeout_retries
+        if nack_retries is None:
+            nack_retries = self.nack_retries
+        timeout_budget = timeout_retries
+        nack_budget = nack_retries
+        nack_attempt = 0
+        while True:
             self._flush_input()
             self._write(frame)
             token = self._read_token(timeout)
             if token == "ACK":
+                self._sleep(self.frame_gap)  # 给设备留出处理/重装接收的时间
                 return
             if token == "NACK":
-                self._log("%s：收到 NACK（第 %d/%d 次）" % (what, attempt, retries), "warn")
+                nack_attempt += 1
+                if nack_budget is not None:
+                    nack_budget -= 1
+                    if nack_budget < 0:
+                        raise FlasherError(
+                            "%s：连续收到 %d 次 NACK，烧录中止"
+                            % (what, nack_retries + 1)
+                        )
+                # 无限重试时限制日志频率，避免刷屏
+                if nack_budget is None:
+                    if nack_attempt <= 10 or nack_attempt % 10 == 0:
+                        self._log(
+                            "%s：收到 NACK，退避后重发（已连续 NACK %d 次，无限重试）"
+                            % (what, nack_attempt),
+                            "warn",
+                        )
+                else:
+                    self._log(
+                        "%s：收到 NACK，退避后重发（NACK 重试剩余 %d 次）"
+                        % (what, nack_budget),
+                        "warn",
+                    )
+                self._sleep(self.nack_backoff)
             else:
-                self._log("%s：应答超时（第 %d/%d 次）" % (what, attempt, retries), "warn")
-        raise FlasherError("%s：重试 %d 次仍未收到 ACK，烧录中止" % (what, retries))
+                timeout_budget -= 1
+                if timeout_budget < 0:
+                    raise FlasherError(
+                        "%s：连续应答超时 %d 次，烧录中止"
+                        % (what, timeout_retries + 1)
+                    )
+                self._log(
+                    "%s：应答超时，重发（超时重试剩余 %d 次）"
+                    % (what, timeout_budget),
+                    "warn",
+                )
+                self._sleep(self.frame_gap)
 
     # -- 协议阶段 -----------------------------------------------------------
     def _handshake(self):
@@ -266,7 +322,7 @@ class OtaFlasher:
             token = self._read_token(0.5)
             if token == "ACK":
                 self._log("握手成功，Bootloader 已进入升级模式", "ok")
-                time.sleep(0.05)
+                self._sleep(max(0.05, self.frame_gap))
                 self._flush_input()  # 丢弃重复 START 产生的多余 ACK
                 return
             if token == "NACK":
@@ -297,7 +353,6 @@ class OtaFlasher:
             self._transact(
                 frame,
                 self.ack_timeout,
-                self.packet_retries,
                 "数据包 %d/%d" % (i + 1, packet_count),
             )
             sent += len(chunk)
@@ -313,7 +368,12 @@ class OtaFlasher:
         self._state("等待设备搬运固件…", "run")
         timeout = max(self.ack_timeout * 3.0, 10.0)
         self._log("发送 FINISH，等待设备完成搬运")
-        self._transact(build_frame(CMD_FINISH), timeout, FINISH_RETRIES, "FINISH")
+        self._transact(
+            build_frame(CMD_FINISH),
+            timeout,
+            "FINISH",
+            timeout_retries=FINISH_TIMEOUT_RETRIES,
+        )
 
     # -- 入口 ---------------------------------------------------------------
     def run(self, firmware):
@@ -405,6 +465,17 @@ class App(tk.Tk):
         )
         self.packet_cb.grid(row=1, column=1, sticky="w", **pad)
         self.packet_cb.bind("<<ComboboxSelected>>", self._on_packet_changed)
+
+        ttk.Label(serial_box, text="帧间隔").grid(row=1, column=2, sticky="e", **pad)
+        gap_frame = ttk.Frame(serial_box)
+        gap_frame.grid(row=1, column=3, sticky="w", **pad)
+        self.gap_var = tk.StringVar(value=str(FRAME_GAP_MS))
+        self.gap_spin = ttk.Spinbox(
+            gap_frame, textvariable=self.gap_var,
+            from_=0, to=1000, increment=5, width=6,
+        )
+        self.gap_spin.pack(side="left")
+        ttk.Label(gap_frame, text=" ms").pack(side="left", padx=(2, 0))
 
         ttk.Label(serial_box, text="应答超时").grid(row=1, column=4, sticky="e", **pad)
         timeout_frame = ttk.Frame(serial_box)
@@ -521,6 +592,7 @@ class App(tk.Tk):
             (self.refresh_btn, "normal"),
             (self.baud_cb, "normal"),
             (self.packet_cb, "readonly"),
+            (self.gap_spin, "normal"),
             (self.timeout_spin, "normal"),
             (self.browse_btn, "normal"),
         ]
@@ -681,9 +753,10 @@ class App(tk.Tk):
         try:
             baud = int(self.baud_var.get())
             packet = int(self.packet_var.get())
+            gap_ms = int(self.gap_var.get())
             ack_ms = int(self.timeout_var.get())
         except ValueError:
-            messagebox.showerror("参数错误", "波特率、包大小、应答超时必须是整数。")
+            messagebox.showerror("参数错误", "波特率、包大小、帧间隔、应答超时必须是整数。")
             return
         if baud <= 0:
             messagebox.showerror("参数错误", "波特率必须大于 0。")
@@ -692,6 +765,9 @@ class App(tk.Tk):
             messagebox.showerror(
                 "参数错误", "包大小必须在 1~%d 字节之间。" % MAX_DATA_LEN
             )
+            return
+        if not 0 <= gap_ms <= 1000:
+            messagebox.showerror("参数错误", "帧间隔必须在 0~1000 ms 之间。")
             return
         if not 200 <= ack_ms <= 60000:
             messagebox.showerror("参数错误", "应答超时必须在 200~60000 ms 之间。")
@@ -712,6 +788,7 @@ class App(tk.Tk):
             baud=baud,
             packet_size=packet,
             ack_timeout=ack_ms / 1000.0,
+            frame_gap=gap_ms / 1000.0,
             on_log=self._queue_log,
             on_progress=self._queue_progress,
             on_state=self._queue_state,
@@ -721,8 +798,8 @@ class App(tk.Tk):
         self._set_controls_enabled(False)
         self._set_status("启动中…", "run")
         self._append_log(
-            "开始烧录：%s，%s 字节，%d B/包"
-            % (self._firmware_path, format(self._firmware_size, ","), packet)
+            "开始烧录：%s，%s 字节，%d B/包，帧间隔 %d ms"
+            % (self._firmware_path, format(self._firmware_size, ","), packet, gap_ms)
         )
         if self._firmware_size > DOWNLOAD_AREA_SIZE:
             self._append_log(

@@ -31,77 +31,79 @@ void BootLoader(void){
         app_jump(BOOTL_APPLICATION_ADDR);
     }else if (BL_Flag_Get() == BOOTL_UPDATING) {
     
-    }else {
-        Flag_Set_Updated();
+    }else if(BL_Flag_Get()!= BOOTL_UPDATED && BL_Flag_Get()!=BOOTL_UPDATING){
+        Flag_Set_Updating();
     }
     static uint32_t g_download_size_total = 0;
     static uint32_t g_download_size = 0;
     static uint32_t g_app_size = 0;
-    uint8_t ret = ota_protocol_start(&o);
-    if(ret){
-        if(o.cmd == OTA_CMD_START && OTA == OTA_UPDATING){
-            BootL_LOG_I("Upcoming upgrade...");
-            Flag_Set_Updating();
-            ota_protocol_Clear();
-            ota_protocol_ACK();
-        }
-        else if (o.cmd == OTA_CMD_DATA && OTA == OTA_UPDATING) {
-            BootL_Flash_If_write(BOOTL_DOWNLOAD_ADDR +  g_download_size, &o.frame[7], o.len);
-            g_download_size+=o.len;
-            g_download_size_total+=o.len;
-            BootL_LOG_I("Recviced:%d/%d remaining, Pack size:%d Bytes", o.index, o.total, g_download_size_total);
-            if((BOOTL_DOWNLOAD_SIZE - g_download_size) <= OTA_MAX_DATA_LEN){
-                OTA = OTA_CARRYING;
-                BootL_LOG_I("Start carry");
-                // g_download_size_total+=g_download_size;
-            }
-            if(OTA != OTA_CARRYING){
+    while (1) {
+        uint8_t ret = ota_protocol_start(&o);
+        if(ret){
+            if(o.cmd == OTA_CMD_START && OTA == OTA_UPDATING){
+                BootL_LOG_I("Upcoming upgrade...");
+                Flag_Set_Updating();
                 ota_protocol_Clear();
                 ota_protocol_ACK();
             }
-        }else if (o.cmd == OTA_CMD_FINISH && OTA == OTA_UPDATING) {
-            OTA = OTA_FINISH;
-        }
-        else {
-
-        }
-        ret = 0;
-    }else{
-        BootL_LOG_E("Frame error:Request the frame again");
-        ota_protocol_Clear();
-        ota_protocol_NACK();
-    }
-    if(OTA == OTA_CARRYING || OTA == OTA_FINISH){
-        uint32_t carry_total = g_download_size;
-        g_download_size = 0;
-        //正在搬运或者提前搬运
-        while(g_download_size < carry_total){
-            // if()
-            if(carry_total - g_download_size < OTA_MAX_DATA_LEN){
-                o.len = carry_total - g_download_size;
-            }else{
-                o.len = OTA_MAX_DATA_LEN;
+            else if (o.cmd == OTA_CMD_DATA && OTA == OTA_UPDATING) {
+                BootL_Flash_If_write(BOOTL_DOWNLOAD_ADDR +  g_download_size, &o.frame[7], o.len);
+                g_download_size+=o.len;
+                g_download_size_total+=o.len;
+                BootL_LOG_I("Recviced:%d/%d remaining, Pack size:%d Bytes", o.index, o.total, g_download_size_total);
+                if((BOOTL_DOWNLOAD_SIZE - g_download_size) <= OTA_MAX_DATA_LEN){
+                    OTA = OTA_CARRYING;
+                    BootL_LOG_I("Start carry");
+                    // g_download_size_total+=g_download_size;
+                }
+                if(OTA != OTA_CARRYING){
+                    ota_protocol_Clear();
+                    ota_protocol_ACK();
+                }
+            }else if (o.cmd == OTA_CMD_FINISH && OTA == OTA_UPDATING) {
+                OTA = OTA_FINISH;
             }
+            else {
 
-            //节省空间复用数据帧的缓存空间
-            BootL_Flash_If_Read(BOOTL_DOWNLOAD_ADDR + g_download_size, &o.frame[7], o.len);
-            BootL_Flash_If_write(BOOTL_APPLICATION_ADDR + g_app_size, &o.frame[7], o.len);
-            g_app_size+=o.len;
-            g_download_size+=o.len;
+            }
+            ret = 0;
+        }else{
+            BootL_LOG_I("Frame error:Request the frame again");
+            ota_protocol_Clear();
+            ota_protocol_NACK();
         }
-        BootL_LOG_I("Carry end")
-        //搬运复用结束再开启接收
-        if(OTA == OTA_FINISH){
-            g_download_size_total = 0;
-            g_app_size = 0;
-            OTA = OTA_IDLE;
-            Flag_Set_Updated();
-            BootL_LOG_I("Updated,rebooting...")
-        }else {
-            OTA = OTA_UPDATING;
+        if(OTA == OTA_CARRYING || OTA == OTA_FINISH){
+            uint32_t carry_total = g_download_size;
+            g_download_size = 0;
+            //正在搬运或者提前搬运
+            while(g_download_size < carry_total){
+                // if()
+                if(carry_total - g_download_size < OTA_MAX_DATA_LEN){
+                    o.len = carry_total - g_download_size;
+                }else{
+                    o.len = OTA_MAX_DATA_LEN;
+                }
+
+                //节省空间复用数据帧的缓存空间
+                BootL_Flash_If_Read(BOOTL_DOWNLOAD_ADDR + g_download_size, &o.frame[7], o.len);
+                BootL_Flash_If_write(BOOTL_APPLICATION_ADDR + g_app_size, &o.frame[7], o.len);
+                g_app_size+=o.len;
+                g_download_size+=o.len;
+            }
+            BootL_LOG_I("Carry end");
+            //搬运复用结束再开启接收
+            if(OTA == OTA_FINISH){
+                g_download_size_total = 0;
+                g_app_size = 0;
+                OTA = OTA_IDLE;
+                Flag_Set_Updated();
+                BootL_LOG_I("Updated,rebooting...");
+            }else {
+                OTA = OTA_UPDATING;
+            }
+            g_download_size = 0;
+            ota_protocol_Clear();
+            ota_protocol_ACK();
         }
-        g_download_size = 0;
-        ota_protocol_Clear();
-        ota_protocol_ACK();
     }
 }

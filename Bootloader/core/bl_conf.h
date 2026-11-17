@@ -7,7 +7,7 @@ extern "C" {
 
 #define BOOTL_VERSION_0 0
 #define BOOTL_VERSION_1 0
-#define BOOTL_VERSION_2 1
+#define BOOTL_VERSION_2 2
 #define STRING_BL_BL(x) #x
 #define BOOTLOADER_VERSION STRING_BL(BOOTL_VERSION_0)"."STRING_BL(BOOTL_VERSION_1)"."STRING_BL(BOOTL_VERSION_2)
 
@@ -23,8 +23,8 @@ extern "C" {
 #define BOOTL_APPLICATION_SIZE  (24 * 1024)      // 28KB
 
 // 3. Download 区 (起始: 0x0800A000, 大小: 23KB)
-#define BOOTL_DOWNLOAD_ADDR     0x0800A800
-#define BOOTL_DOWNLOAD_SIZE     (21 * 1024)      // 23KB
+#define BOOTL_DOWNLOAD_ADDR     0x0800EC00
+#define BOOTL_DOWNLOAD_SIZE     (4 * 1024)      // 23KB
 
 // 4. 标志位页 (位于 Flash 最后一页, 大小: 1KB)
 #define BOOTL_FLAG_PAGE_ADDR    0x0800FC00

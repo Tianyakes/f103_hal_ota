@@ -49,15 +49,14 @@ void BootLoader(void){
             else if (o.cmd == OTA_CMD_DATA && OTA == OTA_UPDATING) {
 
                 ret = BootL_Flash_If_write(BOOTL_DOWNLOAD_ADDR +  g_download_size, &o.frame[7], o.len);
-                if(ret == -1) BootL_LOG_I("download addr error");
-                if(ret == -2) BootL_LOG_I("erase error");
+                if(ret == -1) BootL_LOG_I("Eownload addr error");
+                if(ret == -2) BootL_LOG_I("Erase error");
                 g_download_size+=o.len;
                 g_download_size_total+=o.len;
                 BootL_LOG_I("Recviced:%d/%d remaining, Pack size:%d Bytes", o.index, o.total, g_download_size_total);
-                if((BOOTL_DOWNLOAD_SIZE - g_download_size) <= OTA_MAX_DATA_LEN){
+                if((BOOTL_DOWNLOAD_SIZE - g_download_size) < OTA_MAX_DATA_LEN){
                     OTA = OTA_CARRYING;
-                    BootL_LOG_I("Start carry");
-                    // g_download_size_total+=g_download_size;
+                    BootL_LOG_I("Carry start");
                 }
                 if(OTA != OTA_CARRYING){
                     ota_protocol_Clear();
@@ -71,10 +70,11 @@ void BootLoader(void){
             }
             ret = 0;
         }else{
-            BootL_LOG_I("Frame error:Request the frame again");
+            BootL_LOG_I("Frame error: Request the frame again");
             ota_protocol_Clear();
             ota_protocol_NACK();
         }
+        
         if(OTA == OTA_CARRYING || OTA == OTA_FINISH){
             uint32_t carry_total = g_download_size;
             g_download_size = 0;
@@ -90,7 +90,7 @@ void BootLoader(void){
                 //节省空间复用数据帧的缓存空间
                 BootL_Flash_If_Read(BOOTL_DOWNLOAD_ADDR + g_download_size, &o.frame[7], o.len);
                 BootL_Flash_If_write(BOOTL_APPLICATION_ADDR + g_app_size, &o.frame[7], o.len);
-                if(ret == -1) BootL_LOG_I("download addr error");
+                // if(ret == -1) BootL_LOG_I("download addr error");
                 // if(ret == -2) BootL_LOG_I("erase error");
                 g_app_size+=o.len;
                 g_download_size+=o.len;

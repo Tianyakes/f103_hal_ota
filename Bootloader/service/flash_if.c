@@ -4,7 +4,11 @@
 #include <stdint.h>
 
 int BootL_Flash_If_write(uint32_t addr, const uint8_t *data, uint32_t len){
-    if(addr < BOOTL_DOWNLOAD_ADDR){
+    int in_download = (addr >= BOOTL_DOWNLOAD_ADDR) &&
+                      (addr + len <= BOOTL_DOWNLOAD_ADDR + BOOTL_DOWNLOAD_SIZE);
+    int in_app = (addr >= BOOTL_APPLICATION_ADDR) &&
+                 (addr + len <= BOOTL_APPLICATION_ADDR + BOOTL_APPLICATION_SIZE);
+    if(!in_download && !in_app){
         return -1;
     }
 
@@ -16,6 +20,6 @@ int BootL_Flash_If_write(uint32_t addr, const uint8_t *data, uint32_t len){
     return BL_FlashWriteByte(addr, data, len);
 }
 
-void BootL_Flash_If_Read(uint32_t addr, const uint8_t *data, uint32_t len){
+void BootL_Flash_If_Read(uint32_t addr, uint8_t *data, uint32_t len){
     Flash_Read_Data(addr, data, len);
 }

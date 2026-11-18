@@ -2,7 +2,7 @@
 #include "bl_log.h"
 #include "bl_conf.h"
 #include "stm32f1xx_hal.h"
-#include <stdint.h>
+// #include <stdint.h>
 
 static int BL_IsFlashAddr_Valid(uint32_t addr){
     return (addr>=0x08000000 && addr<=0x08010000);
@@ -11,12 +11,10 @@ static int BL_IsFlashAddr_Valid(uint32_t addr){
 int BL_FlashErasePages(uint32_t start_addr, uint32_t num_pages){
     FLASH_EraseInitTypeDef erase;
     uint32_t page_error = 0;
-
     if(!BL_IsFlashAddr_Valid(start_addr)){
         BootL_LOG_E("Erase err:start address is not valid!");
         return -1;
     }
-
     HAL_FLASH_Unlock();
     erase.TypeErase = FLASH_TYPEERASE_PAGES;
     erase.PageAddress = start_addr;

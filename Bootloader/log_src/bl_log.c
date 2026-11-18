@@ -11,6 +11,6 @@ void BootLoader_LOG(const char *format, ...){
     va_end(args);
     if (len > 0) {
         // 发送出去 (注意 len 不能超过 128)
-        BootLoader_uart_send((const uint8_t *)log_buf, (len < 128) ? len : 128);
+        BL_uart_send((const uint8_t *)log_buf, (len < 128) ? len : 128);
     }
 }

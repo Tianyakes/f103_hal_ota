@@ -4,6 +4,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <stdint.h>
+#include "main.h"
 
 #define BOOTL_VERSION_0 0
 #define BOOTL_VERSION_1 0
@@ -34,15 +36,18 @@ extern "C" {
 
 #define OTA_FRAME_HEAD  0xA5A5  // 帧头：用于对齐数据
 #define OTA_MAX_DATA_LEN 512    // 单包最大携带的数据长度
+#define RX_BUFFER_SIZE 1024  // 缓冲区开大点，能装下最大的 OTA 包
 
 #define BOOTL_MSP_TOP 0x20000000
 
-#define BOOLT_LOG_LEVE 3
+#define BOOLT_LOG_LEVE 0
 
 #define BOOTL_LOG_ERROR 1
 #define BOOTL_LOG_WARRING 2
 #define BOOTL_LOG_INFO 3
 
+#define BL_USE_UART 1
+#define BL_USE_USB 2
 
 #ifdef __cplusplus
 }

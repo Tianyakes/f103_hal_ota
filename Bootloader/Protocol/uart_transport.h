@@ -1,8 +1,7 @@
 #ifndef UART_TRANSPORT_H
 #define UART_TRANSPORT_H
 #include <stdint.h>
-
-#define RX_BUFFER_SIZE 1024  // 缓冲区开大点，能装下最大的 OTA 包
+#include "bl_conf.h"
 
 typedef enum{
     RECVI_FAILED = 0,

@@ -1,6 +1,7 @@
 #include "uart_transport.h"
 #include <stdint.h>
 #include "stm32f1xx_hal.h"
+#include "uart_drv.h"
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
@@ -15,7 +16,7 @@ void UART_Transport_Init(void){
 }
 
 void UART_Transport_Send(const uint8_t *data, uint16_t len) {
-    HAL_UART_Transmit(&huart1, data, len, 100);
+    BL_uart_send(data, len);
 }
 
 uint16_t UART_Transport_GetRxLen(void){

@@ -8,7 +8,7 @@
 #include "main.h"
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_gpio.h"
-#include <stdint.h>
+// #include <stdint.h>
 
 OtaFrame_Type o;
 static OTA_Update_t OTA = OTA_IDLE;

@@ -93,15 +93,6 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  // HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-  // HAL_Delay(200);
-  //   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-  // HAL_Delay(200);
-  //   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-  // HAL_Delay(200);
-  //   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-  // HAL_Delay(200);
-  // app_jump(BOOTL_APPLICATION_ADDR);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
   BootLoader_Init();
   BootLoader();

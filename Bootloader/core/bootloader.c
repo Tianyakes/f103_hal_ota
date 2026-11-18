@@ -30,7 +30,8 @@ void BootLoader(void){
     if(BL_Flag_Get() == BOOTL_UPDATED && OTA == OTA_IDLE){
         app_jump(BOOTL_APPLICATION_ADDR);
     }else if (BL_Flag_Get() == BOOTL_UPDATING) {
-    
+        BootL_LOG_I("The last upgrade failed. Please reflash the firmware");
+        OTA = OTA_UPDATING;
     }else if(BL_Flag_Get()!= BOOTL_UPDATED && BL_Flag_Get()!=BOOTL_UPDATING){
         Flag_Set_Updating();
     }
@@ -68,7 +69,6 @@ void BootLoader(void){
             else {
 
             }
-            ret = 0;
         }else{
             BootL_LOG_I("Frame error: Request the frame again");
             ota_protocol_Clear();

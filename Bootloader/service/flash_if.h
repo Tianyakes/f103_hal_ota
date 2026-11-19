@@ -1,6 +1,6 @@
 #ifndef FLASH_IF_H
 #define FLASH_IF_H
-#include <stdint.h>
+#include "bl_conf.h"
 
 int BootL_Flash_If_write(uint32_t addr, const uint8_t *data, uint32_t len);
 void BootL_Flash_If_Read(uint32_t addr, uint8_t *data, uint32_t len);

@@ -38,8 +38,8 @@ add_executable(${CMAKE_PROJECT_NAME}
     # Bootloader/core/bl_version.h
     Bootloader/core/bootloader.c
     Bootloader/core/bootloader.h
-    Bootloader/core/boot_manager.c
-    Bootloader/core/boot_manager.h
+    # Bootloader/core/boot_manager.c
+    # Bootloader/core/boot_manager.h
     Bootloader/Driver/uart_drv.c
     Bootloader/Driver/uart_drv.h
     Bootloader/Driver/flash_drv.c

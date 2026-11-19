@@ -40,11 +40,14 @@ extern "C" {
 
 #define BOOTL_MSP_TOP 0x20000000
 
-#define BOOLT_LOG_LEVE 0
+#define BOOLT_LOG_LEVE 3
 
 #define BOOTL_LOG_ERROR 1
 #define BOOTL_LOG_WARRING 2
 #define BOOTL_LOG_INFO 3
+
+#define BOOTL_USED_HAL 1
+#define BOOTL_USED_STATE 0
 
 #define BL_USE_UART 1
 #define BL_USE_USB 2

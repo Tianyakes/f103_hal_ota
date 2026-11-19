@@ -8,6 +8,7 @@
 #include "main.h"
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_gpio.h"
+#include <stdint.h>
 // #include <stdint.h>
 
 OtaFrame_Type o;
@@ -24,7 +25,11 @@ void BootLoader_Init(void){
 void BootLoader(void){
     if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET){
         OTA = OTA_UPDATING;
-        BootL_LOG_I("waiting...");
+        uint32_t ver = bl_get_version();
+        BootL_LOG_I("Bootloader version: %d.%d.%d", 
+            (ver >> 0)  & 0xFF,   // 第一段 (bit0-7)
+            (ver >> 8)  & 0xFF,   // 第二段 (bit8-15)
+            (ver >> 16) & 0xFF);  // 第三段 (bit16-23)
     }
     // 外部触发开始升级 中断识别标识页
     if(BL_Flag_Get() == BOOTL_UPDATED && OTA == OTA_IDLE){
